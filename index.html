@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>King Staking Pool</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+        }
+        .wallet-info, .staking-stats {
+            background-color: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .staking-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .option {
+            background-color: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .invest-option {
+            background-color: #0f3460;
+        }
+        button {
+            background-color: #e94560;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .lock-icon {
+            float: right;
+        }
+        .reward-amount {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .small-text {
+            font-size: 0.8em;
+        }
+    </style>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.min.js"></script> -->
+</head>
+<body>
+    <div class="container">
+        <h1>KING STAKING POOL</h1>
+        <div id="message"></div>
+        <div class="wallet-info">
+            <div>Your Wallet: <span id="wallet"><button id="connectWallet" style="width: 50%;">Connect Wallet</button></span> <button id="addPool" style="width: 50%;">Connect Wallet</button></div>
+            <!-- <div>Your Wallet: 🦊 BEX030...210023</div> -->
+            <div>Wallet Balance: <span id="balance">0</span></div>
+            <div>Total Staked: <span id="totalStaked">0</span></div>
+            <div>Total Rewards: <span id="totalRewards">0</span></div>
+        </div>
+        
+        <div class="staking-stats">
+            <div>STAKED: <span id="stakedTime">0</span> TIMES</div>
+            <!-- <div>REWARDS: 2 UNLOCKED</div> -->
+            <!-- <button>WITHDRAWALS</button> -->
+        </div>
+        
+        <div class="staking-options">
+            <div class="option invest-option">
+                <h2>STAKE</h2>
+                <div>
+                    <label for="stakeAmount" style="color: white;">Amount to Stake:</label>
+                    <input style="background-color: black; padding: 10px; margin: 10px 5px;color: #fff;width: 85%;" id="stakeAmount" type="number" value="" required>
+                </div>
+                <div id="pools"></div>
+                <div>
+                    <div>
+                        <label for="poolSelect" style="color: white;">Select Pool:</label>
+                        <select id="poolSelect" style="background-color: black; color: white; padding: 10px; margin: 10px 5px; width: 95%;">
+                        </select>
+                    </div>
+                </div>
+                <button id="stake" style="width: 100%;">STAKE NOW →</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
+        type="application/javascript"></script>
+      <script src="https://cdn.jsdelivr.net/npm/js-loading-overlay@1.1.0/dist/js-loading-overlay.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script type="module">
+
+        async function loadStakingPoolABI() {
+            try {
+                const response = await fetch('./stakingPoolABI.json');
+                const stakingPoolABI = await response.json();
+                console.log(stakingPoolABI);
+                return stakingPoolABI;
+            } catch (error) {
+                console.error('Error loading ABI:', error);
+            }
+        }
+
+        async function loadStakingTokenABI() {
+            try {
+                const response = await fetch('./stakingTokenABI.json');
+                const stakingTokenABI = await response.json();
+                console.log(stakingTokenABI);
+                return stakingTokenABI;
+            } catch (error) {
+                console.error('Error loading ABI:', error);
+            }
+        }
+
+        async function loadStakingNFTABI() {
+            try {
+                const response = await fetch('./stakingNFTABI.json');
+                const stakingNFTABI = await response.json();
+                console.log(stakingNFTABI);
+                return stakingNFTABI;
+            } catch (error) {
+                console.error('Error loading ABI:', error);
+            }
+        }
+
+        // Call the async function
+        const stakingPoolABI = await loadStakingPoolABI();
+        const stakingTokenABI = await loadStakingTokenABI();
+        const stakingNFTABI = await loadStakingNFTABI();
+
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+
+        const stakingPoolAddress = "0xb2E4f50ec7Cd63984b1aa22849bBb2b8A8637887";
+        const stakingTokenAddress = "0x5Bb921D8b6307A352B09338C877F661125811Df2";
+        const stakingNFTAddress = "0xB70b5532324315C809e4479725a1D9dAa51A7E54";
+
+        const contract = new ethers.Contract(stakingPoolAddress, stakingPoolABI, provider);
+        const tokenContract = new ethers.Contract(stakingTokenAddress, stakingTokenABI, provider);
+        const nftContract = new ethers.Contract(stakingNFTAddress, stakingNFTABI, provider);
+
+        function hex_to_ascii(str1) {
+            var hex  = str1.toString();
+            var str = '';
+            for (var n = 0; n < hex.length; n += 2) {
+                str += String.fromCharCode(parseInt(hex.substr(n, 2), 16));
+            }
+            return str;
+        }
+
+        async function getPools() {
+            await provider.send("eth_requestAccounts", []);
+
+            const nextPoolId = await contract.nextPoolId();
+            const pools = [];
+
+            for (let poolId = 1; poolId < nextPoolId; poolId++) {
+                const pool = await contract.pools(poolId);
+                pools.push({
+                    id: poolId,
+                    stakingToken: pool[0],
+                    rewardRate: pool[1].toString(),
+                    totalStaked: pool[2].toString(),
+                });
+            }
+
+            /*const poolsContainer = document.getElementById('pools');
+            poolsContainer.innerHTML = '';
+
+            pools.forEach(pool => {
+                const button = document.createElement('button');
+                button.textContent = `Pool ${pool.id}: ${pool.rewardRate/1000000000000000000} KC`;
+                button.onclick = () => {
+                    console.log(`Button for Pool ${pool.id} clicked`);
+                };
+                poolsContainer.appendChild(button);
+            });*/
+            const poolSelect = document.getElementById('poolSelect');
+            poolSelect.innerHTML = '<option value="" disabled selected>Select a pool</option>';
+
+            pools.forEach(pool => {
+                const option = document.createElement('option');
+                option.value = pool.id;
+                option.setAttribute('data-reward-rate', pool.rewardRate);
+                option.textContent = `Pool ${pool.id}: ${pool.rewardRate / 1e18} KC`;
+                poolSelect.appendChild(option);
+            });
+
+            console.log(pools.length)
+        }
+
+        async function addPool() {
+            JsLoadingOverlay.show();
+            const stakingToken = "0x5Bb921D8b6307A352B09338C877F661125811Df2";
+            // const rewardRate = document.getElementById('rewardRate').value;
+            const rewardRate = "10";
+
+            if (!stakingToken || !rewardRate) {
+                alert("Please fill in both fields.");
+                JsLoadingOverlay.hide();
+                return;
+            }
+
+            // try {
+                const signer = provider.getSigner();
+                const contractWithSigner = contract.connect(signer);
+                const tx = await contractWithSigner.addPool(stakingToken, ethers.utils.parseUnits(rewardRate, 18));
+                await tx.wait();
+                console.log(tx)
+                alert("Pool added successfully!");
+                getAllPools();
+                JsLoadingOverlay.hide();
+            /*} catch (error) {
+                console.error("Error adding pool:", error);
+                alert("Failed to add pool.");
+            }*/
+        }
+
+        document.getElementById("addPool").addEventListener("click", async () => {
+            addPool();
+        });
+
+        async function stakeTokens(poolId, amount) {
+            try {
+                const signer = provider.getSigner();
+                const contractWithSigner = contract.connect(signer);
+                const tokenContractWithSigner = new ethers.Contract(stakingTokenAddress, stakingTokenABI, signer);
+
+                const approvalTx = await tokenContractWithSigner.approve(stakingPoolAddress, ethers.utils.parseUnits(amount.toString(), 18));
+                await approvalTx.wait();
+
+                const tx = await contractWithSigner.stake(poolId, ethers.utils.parseUnits(amount.toString(), 18));
+                await tx.wait();
+
+                addStakeToDOM(poolId, amount);
+                JsLoadingOverlay.hide();
+            } catch (error) {
+                console.error(error);
+                if (error.data && error.data.message) {
+                    const revertMessage = error.data.message;
+                    JsLoadingOverlay.hide();
+                    // alert(`Transaction failed: ${revertMessage}`);
+                } else if (error.message) {
+                    JsLoadingOverlay.hide();
+                    // alert(`Transaction failed: ${error.message}`);
+                } else {
+                    JsLoadingOverlay.hide();
+                    // alert("Failed to stake tokens due to an unknown error.");
+                }
+            }
+        }
+
+        function addStakeToDOM(poolId, amount) {
+            const stakesContainer = document.querySelector(".staking-options");
+            const investOption = document.querySelector(".option.invest-option");
+
+            const stakeDiv = document.createElement("div");
+            stakeDiv.className = "option";
+            stakeDiv.innerHTML = `
+                <div class="lock-icon">🔒</div>
+                <div>Locked</div>
+                <div class="reward-amount">Pool: ${poolId}</div>
+                <div class="reward-amount">Staked Amount: ${amount} KTK</div>
+                <div class="reward-amount">Reward Rate: TBD</div>
+                <button style="width: 100%;" class="claim-rewards-button" data-pool-id="${stake.poolId}">Claim Rewards →</button>
+            `;
+
+            investOption.insertAdjacentElement('afterend', stakeDiv);
+
+            const claimButton = stakeDiv.querySelector('.claim-rewards-button');
+            claimButton.onclick = async (event) => {
+                const poolId = event.target.dataset.poolId;
+                await claimRewards(poolId);
+            };
+        }
+
+        document.getElementById('stake').onclick = function() {
+            const amount = document.getElementById('stakeAmount').value;
+            const poolId = document.getElementById("poolSelect").value;
+
+            if (amount && poolId) {
+                stakeTokens(poolId, amount);
+            } else {
+                alert("Please enter an amount and select pool to stake.");
+            }
+        };
+
+        document.getElementById("connectWallet").addEventListener("click", async () => {
+            JsLoadingOverlay.show();
+            try {
+                if (window.ethereum) {
+                    await provider.send("eth_requestAccounts", []);
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+
+                    document.getElementById("wallet").innerHTML = `🦊 ${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+                    Toastify({
+                      text: `Wallet connected successfully`,
+                      className: "info",
+                      style: {
+                        background: "green",
+                      }
+                    }).showToast();
+                    JsLoadingOverlay.hide();
+                } else {
+                    // alert("MetaMask not detected. Please install MetaMask.");
+                    Toastify({
+                      text: `No wallet detected. Please install a wallet`,
+                      className: "info",
+                      style: {
+                        background: "red",
+                      }
+                    }).showToast();
+                    JsLoadingOverlay.hide();
+                }
+            } catch (error) {
+                console.error("Error connecting wallet", error);
+                Toastify({
+                  text: `Error connecting wallet. Please try again`,
+                  className: "info",
+                  style: {
+                    background: "red",
+                  }
+                }).showToast();
+                // alert("Error connecting wallet: " + error.message);
+                JsLoadingOverlay.hide();
+            }
+        });
+
+        async function getBalance() {
+            try {
+                if (window.ethereum) {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    const balance = await provider.getBalance(address);
+
+                    document.getElementById("balance").innerText = `${balance/1000000000000000000} ETH`;
+                } else {
+                    document.getElementById("balance").innerText = `0`;
+                }
+            } catch (error) {
+                document.getElementById("balance").innerText = `0`;
+                alert("Error connecting wallet: " + error.message);
+            }
+        }
+
+        async function getTokenBalance() {
+            try {
+                if (window.ethereum) {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+
+                    const balance = await tokenContract.balanceOf(address);
+                    const decimals = 18;
+                    const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+                    const symbol = await tokenContract.symbol();
+
+                    console.log(formattedBalance);
+
+                    // const balance = await provider.getBalance(address);
+
+                    document.getElementById("balance").innerText = `${formattedBalance} ${symbol}`;
+                } else {
+                    document.getElementById("balance").innerText = `0`;
+                }
+            } catch (error) {
+                document.getElementById("balance").innerText = `0`;
+                // alert("Error connecting wallet: " + error.message);
+            }
+        }
+
+        async function getTotalRewards(userAddress) {
+            const signer = provider.getSigner();
+
+            const contract = new ethers.Contract(stakingPoolAddress, stakingPoolABI, signer);
+
+            try {
+
+                const nextPoolId = await contract.nextPoolId();
+
+                let totalRewards = ethers.BigNumber.from(0);
+
+                for (let poolId = 1; poolId < nextPoolId; poolId++) {
+                    const stakedAmount = await contract.getStakedBalance(poolId, userAddress);
+                    if (stakedAmount.gt(0)) {
+                        const rewards = await contract.calculateReward(poolId, userAddress);
+                        totalRewards = totalRewards.add(rewards);
+                    }
+                }
+
+                console.log(`Total Rewards: ${ethers.utils.formatUnits(totalRewards, 18)} (in token units)`);
+                document.getElementById("totalRewards").innerText = `${ethers.utils.formatUnits(totalRewards, 18)}`;
+
+                // return totalRewards;
+            } catch (error) {
+                document.getElementById("totalRewards").innerText = `0`;
+                console.error("Error fetching total rewards:", error);
+            }
+        }
+
+
+        async function getNFTBalance() {
+            try {
+                if (window.ethereum) {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+
+                    const balance = await nftContract.balanceOf(address, 1);
+
+                    console.log(balance);
+
+                    // const balance = await provider.getBalance(address);
+
+                    // document.getElementById("balance").innerText = `${formattedBalance} ${symbol}`;
+                } else {
+                    // document.getElementById("balance").innerText = `0`;
+                }
+            } catch (error) {
+                // document.getElementById("balance").innerText = `0`;
+                alert("Error connecting wallet: " + error.message);
+            }
+        }
+
+        async function getUserStakes(userAddress) {
+    try {
+        const nextPoolId = await contract.nextPoolId(); // Get total pools
+        const stakesDetails = [];
+
+        // Loop through each pool to gather stake details
+        for (let poolId = 1; poolId < nextPoolId; poolId++) {
+            const stakedAmount = await contract.getStakedBalance(poolId, userAddress);
+            const lastRewardBlock = await contract.stakers(userAddress, poolId).lastRewardBlock; // Ensure you can access this
+
+            let poolRewardRate = ethers.BigNumber.from(0);
+            if (stakedAmount.gt(0)) {
+                poolRewardRate = await contract.pools(poolId); // Assuming you have a way to get the reward rate
+                stakesDetails.push({
+                    poolId: poolId.toString(),
+                    amountStaked: ethers.utils.formatUnits(stakedAmount, 18),
+                    lastRewardBlock: lastRewardBlock,
+                    rewardRate: ethers.utils.formatUnits(poolRewardRate[1].toString(), 18)
+                });
+            }
+        }
+
+        const stakesContainer = document.querySelector(".staking-options");
+        const investOption = document.querySelector(".option.invest-option");
+
+        stakesDetails.forEach(stake => {
+            const stakeElement = document.createElement("div");
+            stakeElement.className = "option";
+
+            stakeElement.innerHTML = `
+                <div class="lock-icon">🔒</div>
+                <div>Locked</div>
+                <div class="reward-amount">Pool: ${stake.poolId}</div>
+                <div class="reward-amount">Staked Amount: ${stake.amountStaked} KTK</div>
+                <div class="reward-amount">Reward Rate: ${stake.rewardRate} KC NFT</div>
+                <button style="width: 100%;" class="claim-rewards-button" data-pool-id="${stake.poolId}">Claim Rewards →</button>
+            `;
+
+            investOption.insertAdjacentElement('afterend', stakeElement);
+
+            const claimButton = document.querySelector('.claim-rewards-button');
+    claimButton.onclick = async (event) => {
+        const poolId = event.target.dataset.poolId;
+        await claimRewards(poolId);
+    };
+        });
+
+    } catch (error) {
+        console.error("Error fetching user stakes:", error);
+    }
+}
+
+
+        async function claimRewards(poolId) {
+
+            const signer = provider.getSigner();
+
+            const contract = new ethers.Contract(stakingPoolAddress, stakingPoolABI, signer);
+
+            try {
+                const tx = await contract.claimReward(poolId);
+                console.log("Claiming rewards, waiting for transaction to be mined...");
+                Toastify({
+                  text: `Claiming rewards, waiting for transaction to be mined...`,
+                  className: "info",
+                  style: {
+                    background: "blue",
+                  }
+                }).showToast();
+
+                // Wait for the transaction to be mined
+                const receipt = await tx.wait();
+
+                if (receipt.status === 1) {
+                    console.log(`Rewards claimed successfully for Pool ID: ${poolId}`);
+                    Toastify({
+                      text: `Rewards claimed successfully for Pool ID: ${poolId}`,
+                      className: "info",
+                      style: {
+                        background: "green",
+                      }
+                    }).showToast();
+                } else {
+                    Toastify({
+                      text: `Error claiming rewards`,
+                      className: "info",
+                      style: {
+                        background: "red",
+                      }
+                    }).showToast();
+                    console.error("Transaction failed.");
+                }
+            } catch (error) {
+                Toastify({
+                  text: `Error claiming rewards`,
+                  className: "info",
+                  style: {
+                    background: "red",
+                  }
+                }).showToast();
+                console.error("Error claiming rewards:", error);
+                // alert(`Error claiming rewards: ${error.message}`);
+            }
+        }
+
+
+        async function getUserStakedAmount() {
+            try {
+                if (window.ethereum) {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+
+                    const nextPoolId = await contract.nextPoolId();
+
+                    let totalStaked = ethers.BigNumber.from(0);
+                    let stakedTime = ethers.BigNumber.from(0);
+
+                    for (let poolId = 1; poolId < nextPoolId; poolId++) {
+                        const stakedAmount = await contract.getStakedBalance(poolId, address);
+                        totalStaked = totalStaked.add(stakedAmount);
+                        stakedTime = stakedTime.add(1);
+                    }
+
+                    const formattedTotalStaked = ethers.utils.formatUnits(totalStaked, 18);
+
+                    document.getElementById("totalStaked").innerText = `${formattedTotalStaked} KTK`;
+                    document.getElementById("stakedTime").innerText = `${stakedTime}`;
+                }else{
+                    document.getElementById("totalStaked").innerText = `0 KTK`;
+                    document.getElementById("stakedTime").innerText = `0`;
+                }
+            } catch (error) {
+                console.error("Error fetching staked amount:", error);
+                document.getElementById("totalStaked").innerText = `0 KTK`;
+                document.getElementById("stakedTime").innerText = `0`;
+            }
+        }
+
+        function flashMessage(message) {
+            const messageDiv = document.getElementById("message");
+            messageDiv.innerText = message;
+            setTimeout(() => { messageDiv.innerText = ""; }, 5000);
+        }
+
+        const truncateAddress = (address) => {
+            return `${address.slice(0, 6)}...${address.slice(-5)}`;
+        };
+
+        async function checkWalletConnection() {
+            if (window.ethereum) {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = await provider.getSigner();
+                    const address = await signer.getAddress();
+                    document.getElementById("wallet").innerHTML = `🦊 ${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+
+                    getBalance();
+
+                    getTokenBalance();
+
+                    getNFTBalance();
+
+                    getUserStakedAmount();
+
+                    getUserStakes(address);
+
+                    getTotalRewards(address);
+
+                    getPools();
+                } else {
+                    Toastify({
+                      text: "Please connect your wallet",
+                      className: "info",
+                      style: {
+                        background: "red",
+                      }
+                    }).showToast();
+                    console.log("No accounts found. Please connect MetaMask.");
+                }
+            } else {
+                Toastify({
+                  text: "Please install a wallet",
+                  className: "info",
+                  style: {
+                    background: "red",
+                  }
+                }).showToast();
+                alert("MetaMask not detected. Please install MetaMask.");
+            }
+        }
+
+        checkWalletConnection();
+    </script>
+</body>
+</html>
