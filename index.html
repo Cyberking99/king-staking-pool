@@ -71,7 +71,7 @@
         <h1>KING STAKING POOL</h1>
         <div id="message"></div>
         <div class="wallet-info">
-            <div>Your Wallet: <span id="wallet"><button id="connectWallet" style="width: 50%;">Connect Wallet</button></span> <button id="addPool" style="width: 50%;">Connect Wallet</button></div>
+            <div>Your Wallet: <span id="wallet"><button id="connectWallet" style="width: 50%;">Connect Wallet</button></span> <!--button id="addPool" style="width: 50%;">Connect Wallet</button--></div>
             <!-- <div>Your Wallet: 🦊 BEX030...210023</div> -->
             <div>Wallet Balance: <span id="balance">0</span></div>
             <div>Total Staked: <span id="totalStaked">0</span></div>
@@ -208,37 +208,6 @@
 
             console.log(pools.length)
         }
-
-        async function addPool() {
-            JsLoadingOverlay.show();
-            const stakingToken = "0x5Bb921D8b6307A352B09338C877F661125811Df2";
-            // const rewardRate = document.getElementById('rewardRate').value;
-            const rewardRate = "10";
-
-            if (!stakingToken || !rewardRate) {
-                alert("Please fill in both fields.");
-                JsLoadingOverlay.hide();
-                return;
-            }
-
-            // try {
-                const signer = provider.getSigner();
-                const contractWithSigner = contract.connect(signer);
-                const tx = await contractWithSigner.addPool(stakingToken, ethers.utils.parseUnits(rewardRate, 18));
-                await tx.wait();
-                console.log(tx)
-                alert("Pool added successfully!");
-                getAllPools();
-                JsLoadingOverlay.hide();
-            /*} catch (error) {
-                console.error("Error adding pool:", error);
-                alert("Failed to add pool.");
-            }*/
-        }
-
-        document.getElementById("addPool").addEventListener("click", async () => {
-            addPool();
-        });
 
         async function stakeTokens(poolId, amount) {
             try {
